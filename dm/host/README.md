@@ -116,3 +116,5 @@ make -C dm/host/tests run
 It needs the game files and a workspace prepared by `./setup.sh`. The `t_*.c` files are per-module unit tests. Four source-only checks run with them: no writes to the original game's UI widgets (`native_write_scan.py`), registration of touch / controller mode behavior (`mode_scan.py`), the string table matching its generated header (`dm/ios/tools/dm_i18n.py --check`), and the literal gate (`dm/i18n/scan_literals.py`); so do two checks against the original program image (`movie_cut.py`, `oe_notify.py`).
 
 The directory also holds a few standalone scripts that are not part of that command (`run_rule.py`, `run_manifest.py`, `move_codec.py`, `client_sta_gate.py`, `server42_rule.py`, `server_walk_request.py`); what each is for, and its limits, is in its file header.
+
+Optional macOS VP8 playback and synthetic tests: [MOVIE.md](MOVIE.md).

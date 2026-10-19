@@ -116,3 +116,5 @@ make -C dm/host/tests run
 需要游戏文件与 `./setup.sh` 备好的工作区。`t_*.c` 是各模块的单测；一起跑的还有四条只读源码的检查：不许写原版界面控件（`native_write_scan.py`）、触屏 / 手柄模式的登记（`mode_scan.py`）、中英表与生成头文件一致（`dm/ios/tools/dm_i18n.py --check`）、字面量闸门（`dm/i18n/scan_literals.py`）；以及两条对着原版程序映像的核对（`movie_cut.py`、`oe_notify.py`）。
 
 目录里另有几个不在这条命令里的独立脚本（`run_rule.py`、`run_manifest.py`、`move_codec.py`、`client_sta_gate.py`、`server42_rule.py`、`server_walk_request.py`），各自的用途与局限写在文件头。
+
+可选的 macOS VP8 播放与合成测试：[MOVIE.zh-CN.md](MOVIE.zh-CN.md)。
