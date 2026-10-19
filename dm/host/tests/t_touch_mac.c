@@ -404,6 +404,34 @@ static void test_pr95_legacy_hover(void){
  live_reset();legacy_hover_calls=0;test_pc_desktop=1;dm_touch_host_live(3,.7f,.4f);live_poll();
  CHECK(!legacy_hover_calls&&mouse_native_calls==1&&mouse_native_side[0]==1&&mouse_native_phase[0]==0,"PC op3 remains exact right DOWN and bypasses legacy hover");
 }
+// 悬停与点击独立：大量移动不能挤掉点击，按住 / 拖放时不改手势目标。
+// Hover is independent of clicks: many moves cannot crowd clicks out, and held / dragged gestures keep their target.
+static void test_live_hover(void) {
+    live_reset(); legacy_hover_calls = 0;
+    for (int i = 0; i < 1000; i++) dm_touch_host_live(3, (float)i / 1000, .4f);
+    CHECK(atomic_load(&g_live.head) == atomic_load(&g_live.tail), "hover does not occupy the click queue");
+    live_poll();
+    CHECK(legacy_hover_calls == 1 && fabsf(legacy_hover_x - .999f) < .0001f && fabsf(legacy_hover_y - .4f) < .0001f, "hover coalesces to the latest position");
+    CHECK(clicks == 0 && walks == 0 && ui_events == 0 && polled_buttons == 0, "hover neither clicks nor walks nor presses a key");
+    live_poll(); CHECK(legacy_hover_calls == 1, "stationary mouse does not keep overriding the controller");
+    dm_touch_host_live(3, -1, -1); live_poll();
+    CHECK(legacy_hover_calls == 2 && legacy_hover_x == -1 && legacy_hover_y == -1, "leaving the picture requests tooltip dismissal");
+    dm_touch_host_live(3, .3f, .4f); live_event(0, .7f, .4f);
+    CHECK(clicks == 1 && legacy_hover_calls == 2, "mouse down cancels stale hover and still clicks");
+    dm_touch_host_live(3, .2f, .4f); live_poll();
+    CHECK(legacy_hover_calls == 2, "hover cannot change an active world gesture");
+    live_event(2, 0, 0);
+    g_touch.state.pointer_slot = 0;
+    dm_touch_host_live(3, .2f, .4f); live_poll();
+    CHECK(legacy_hover_calls == 2, "hover cannot change an active item gesture");
+    g_touch.state.pointer_slot = DM_TC_NONE; g_touch.state.pulse_button = DM_BTN_A;
+    dm_touch_host_live(3, .2f, .4f); live_poll();
+    CHECK(legacy_hover_calls == 2, "hover cannot change a pending item action");
+    g_touch.state.pulse_button = 0;
+    dm_touch_host_live(3, .2f, .4f); live_poll();
+    CHECK(legacy_hover_calls == 3, "hover resumes after gestures complete");
+}
+
 int main(void) {
     char path[4096];snprintf(path,sizeof path,"%s/touch_host.script",getenv("DM_TEST_BUILD")?getenv("DM_TEST_BUILD"):"build");
     FILE *f = fopen(path, "w"); if (!f) return 2;
@@ -445,6 +473,7 @@ int main(void) {
     test_pc_potions_navigation();
     test_right_mouse();
     test_pc_keyboard();
+    test_live_hover();
     printf("== touch host %d 项，失败 %d ==\n", checks, fails);
     return fails != 0;
 }
