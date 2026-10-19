@@ -2,6 +2,7 @@
 // Minimap diagnostic regression: real production sampler with authored objects; covers missing/hidden/Act changes/offsets, stable-state deduplication and read-only widgets.
 // Minimap diagnostic regression: real production sampler with authored objects; covers missing/hidden/Act changes/offsets, stable-state deduplication and read-only widgets.
 #include "../dm_cursor.c"
+int dm_ui_pc_desktop(void) { return 0; }
 module_t g_mod[MAX_MOD]; int g_nmod;
 static int area = 1, uy = 308;
 void dm_hud_get(dm_hud_info *h) { memset(h, 0, sizeof *h); h->valid = 1; h->area = area; }

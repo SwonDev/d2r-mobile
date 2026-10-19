@@ -2,6 +2,7 @@
 // Replay layout replacement through the production move guard and lift pump; verify loading messages and move-table compaction.
 // Replay layout replacement through the production move guard and lift pump; verify loading messages and move-table compaction.
 #include "../dm_cursor.c"
+int dm_ui_pc_desktop(void) { return 0; }
 module_t g_mod[MAX_MOD]; int g_nmod;
 static int busy, ingame=1, uy=314; static uint64_t frame=100;
 uint64_t dm_guest_frame(void) { return frame; }
