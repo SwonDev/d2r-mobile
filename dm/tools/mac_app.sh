@@ -5,14 +5,14 @@
 #   这样出的包里只有宿主程序和 Resources/paths.txt（三项各指向本机构建产物的路径），只在构建它的这台机器上能跑。
 # 版本：给人看的版本号 DM_MAC_VERSION（缺省 1.0，与 iOS 包同叫法）；构建号 DM_MAC_BUILD（缺省取当前月日时分，同 iOS 包格式）。产物代号与提交号写在包里的 Resources/build.txt。
 # 更新检查：DM_MAC_UPDATE_URL=<版本文件地址>（如下载站的 latest_mac.json）写进 Info.plist 的 SWUpdateURL，App 启动后读它、比包内构建号新就在主菜单提示；不给 = 不检查（公开版 / 自己构建的包）。
-# 游戏资源不进包：第一次启动请玩家选资源文件夹（host/app_mac.m）。签名用本地临时签名，本机直接能跑。
+# 游戏资源缺省不进包（DM_MAC_ROMFS_COPY=1 可带自己的资源）：第一次启动请玩家选资源文件夹（host/app_mac.m）。签名用本地临时签名，本机直接能跑。
 # Wrap the Mac host into a macOS App that starts on double-click: mac_app.sh [output directory]   produces <output directory>/D2R Mobile.app (default $DM_ROOT/out/macapp)
 # The package holds: the host program, the rewritten game program (build output directory, kind DM_MAC_PRODUCT, default touch), and the UI overlay when there is one (DM_MAC_OVERLAY=<directory>).
 # DM_MAC_LINK=1: build without derived content - the rewritten game program, the shader libraries and the UI overlay are all derived from game content and must not be in a publicly released package;
 #   a package built this way holds only the host program and Resources/paths.txt (three entries, each pointing at a build output on this machine), and runs only on the machine that built it.
 # Version: the human-readable version DM_MAC_VERSION (default 1.0, named the same way as the iOS package); the build number DM_MAC_BUILD (default: current month-day-hour-minute, same format as the iOS package). The build output generation and the commit are written to Resources/build.txt in the package.
 # Update check: DM_MAC_UPDATE_URL=<version file address> is written into SWUpdateURL in Info.plist; after launch the App reads it and shows a hint on the main menu when it is newer than the build number in the package; not given = no check (public builds / packages you build yourself).
-# Game resources do not go into the package: on first launch the player is asked to choose the resource folder (host/app_mac.m). Signing is local ad-hoc signing, which runs directly on this machine.
+# Game resources are external by default (DM_MAC_ROMFS_COPY=1 opts into a private copy): on first launch the player is asked to choose the resource folder (host/app_mac.m). Signing is local ad-hoc signing, which runs directly on this machine.
 set -eu
 HERE=$(cd "$(dirname "$0")" && pwd); DM=$HERE/..; ROOT=${DM_ROOT:-$HOME/dm-work}
 OUT=${1:-$ROOT/out/macapp}; KIND=${DM_MAC_PRODUCT:-touch}; BID=${DM_MAC_BUNDLE_ID:-org.d2rmobile.mac}
@@ -20,9 +20,11 @@ P=$(bash "$HERE/product.sh" path "$KIND"); [ -f "$P/main.patched.bin" ] || { ech
 # DM_MAC_M3=1：老接口版（图形后端不用 Metal 4，最低系统 host/Makefile 的 MACOS_MIN_M3）。包名、显示名、包标识都带 M3，能和正式包并存；存档与日志目录也是另一个
 # DM_MAC_M3=1: older-API build (the graphics backend does not use Metal 4; minimum system is MACOS_MIN_M3 in host/Makefile). Package name, display name and bundle identifier all carry M3 so it can coexist with the regular package; the save and log directory is a separate one as well
 M3=${DM_MAC_M3:-}; NAME="D2R Mobile${M3:+ M3}"; [ -z "$M3" ] || BID=${DM_MAC_BUNDLE_ID:-org.d2rmobile.mac.m3}
+APP="$OUT/$NAME.app"
+[ ! -e "$APP" ] && [ ! -L "$APP" ] || { echo "Output app already exists: $APP"; exit 2; }
 make -C "$DM/host" ${M3:+dmhost_m3} > /dev/null
 MIN=$(make -s -C "$DM/host" print-macos-min${M3:+-m3})   # 最低系统版本：与编译宿主用的是同一个数（host/Makefile 的 MACOS_MIN / MACOS_MIN_M3） | minimum system version: the same number the host is compiled with (MACOS_MIN / MACOS_MIN_M3 in host/Makefile)
-APP="$OUT/$NAME.app"; rm -rf "$APP"; mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$DM/host/dmhost${M3:+_m3}" "$APP/Contents/MacOS/D2RMobile"
 LINK=${DM_MAC_LINK-1}; [ "$LINK" != 0 ] || LINK=; RES="$APP/Contents/Resources"; : > "$RES/paths.txt"
 if [ -n "$LINK" ]; then echo "product=$P" >> "$RES/paths.txt"; else cp -R "$P" "$RES/product"; fi
@@ -46,6 +48,26 @@ if [ "${DM_MAC_OVERLAY:-}" != none ]; then
   if [ -n "${DM_MAC_OVERLAY:-}" ]; then cp -R "$DM_MAC_OVERLAY" "$OVD"
   else DM_OVERLAY_MAC=1 python3 "$DM/ios/tools/gen_romfs_overlay.py" "${DM_ROMFS_SRC:-$ROOT/data/switch/3.3.94012/Update/RomFS}" "$OVD" > /dev/null || { echo "🔴 界面覆盖层生成失败"; exit 2; }; fi
 fi
+# Optional private resources and caller-supplied artwork; never needed for a public linked package.
+if [ "${DM_MAC_ROMFS_COPY:-0}" = 1 ]; then
+  ROM=${DM_ROMFS_SRC:-$ROOT/data/switch/3.3.94012/Update/RomFS}
+  [ -f "$ROM/data/build_manifest.psv" ] || { echo "Missing resource manifest: $ROM"; exit 2; }
+  ditto "$ROM" "$RES/romfs"
+fi
+if [ -n "${DM_MAC_ICON_SOURCE:-}" ]; then
+  [ -f "$DM_MAC_ICON_SOURCE" ] || { echo "Icon source not found: $DM_MAC_ICON_SOURCE"; exit 2; }
+  ICONSET="$RES/AppIcon.iconset"; mkdir "$ICONSET"
+  for size in 16 32 128 256 512; do
+    sips -s format png -z "$size" "$size" "$DM_MAC_ICON_SOURCE" --out "$ICONSET/icon_${size}x${size}.png" > /dev/null
+    twice=$((size * 2))
+    sips -s format png -z "$twice" "$twice" "$DM_MAC_ICON_SOURCE" --out "$ICONSET/icon_${size}x${size}@2x.png" > /dev/null
+  done
+  iconutil -c icns "$ICONSET" -o "$RES/AppIcon.icns"
+  rm -r "$ICONSET"
+fi
+if [ -z "$LINK" ] && [ -n "$(find "$RES" -type l -print -quit)" ]; then
+  echo "Self-contained resources must not contain symlinks"; exit 3
+fi
 [ -s "$RES/paths.txt" ] || rm -f "$RES/paths.txt"
 VER=${DM_MAC_VERSION:-1.0}; BUILD=${DM_MAC_BUILD:-$(date +%m%d%H%M)}
 echo "版本 ${VER} 构建 ${BUILD} 产物 $(basename "$P") 提交 $(git -C "$DM" rev-parse --short HEAD 2>/dev/null || echo 未知)" > "$RES/build.txt"
@@ -57,6 +79,7 @@ cat > "$APP/Contents/Info.plist" <<PL
 <key>CFBundleDisplayName</key><string>$NAME</string>
 <key>CFBundleIdentifier</key><string>$BID</string>
 <key>CFBundleExecutable</key><string>D2RMobile</string>
+${DM_MAC_ICON_SOURCE:+<key>CFBundleIconFile</key><string>AppIcon</string>}
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>CFBundleShortVersionString</key><string>$VER</string>
 <key>CFBundleVersion</key><string>$BUILD</string>
@@ -84,5 +107,7 @@ done ) || exit 3; fi
 BIN_MIN=$(otool -l "$APP/Contents/MacOS/D2RMobile" | awk '$1=="minos"{print $2; exit}'); PL_MIN=$(/usr/libexec/PlistBuddy -c "Print :LSMinimumSystemVersion" "$APP/Contents/Info.plist")
 [ -n "$BIN_MIN" ] && [ "$BIN_MIN" = "$PL_MIN" ] || { echo "🔴 最低系统版本对不上：程序本体 ${BIN_MIN:-读不到}，Info.plist ${PL_MIN}"; exit 3; }
 ARCHS=$(lipo -archs "$APP/Contents/MacOS/D2RMobile"); [ "$ARCHS" = arm64 ] || { echo "🔴 程序本体的架构不是只有 arm64：${ARCHS}"; exit 3; }
+python3 "$HERE/mac_bundle.py" "$APP/Contents/MacOS/D2RMobile" "$DM/host/dmhost${M3:+_m3}"
 codesign --force -s - "$APP" > /dev/null 2>&1 || { echo "🔴 本地签名失败"; exit 3; }
+codesign --verify --deep --strict "$APP"
 echo "MACAPP ${APP}（${M3:+老接口版，}版本 ${VER} 构建 ${BUILD}，最低系统 macOS ${MIN}，产物 $(basename "$P")，$(du -sh "$APP" | cut -f1)${LINK:+，不带派生物：只能在本机跑}）"
