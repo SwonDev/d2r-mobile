@@ -1,4 +1,5 @@
 // Real PC clone held state; doubled dispatcher, production getter and cancellation.
+#define DM_PC_ITEMS_CONNECTED 0
 #include "../dm_cursor.c"
 module_t g_mod[MAX_MOD];int g_nmod;
 static int desktop=1,ingame=1,busy,world=1,checks,failures;

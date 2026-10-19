@@ -1,4 +1,5 @@
 // A5/A6 PC skill boundaries: native endpoint sinks with real memory and guards.
+#define DM_PC_ITEMS_CONNECTED 0
 #include "../dm_cursor.c"
 #include <unistd.h>
 #include <fcntl.h>

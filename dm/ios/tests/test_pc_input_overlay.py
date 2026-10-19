@@ -120,7 +120,24 @@ class InputOverlay(unittest.TestCase):
         output = self.root / 'packed'
         generated = self.root / 'mobile-assets'
         env = dict(os.environ, DM_OVERLAY_PC='1', DM_OVERLAY_MAC='1', DM_GEN_ASSETS=str(generated))
-        result = subprocess.run([sys.executable, str(pc.HERE / 'gen_romfs_overlay.py'), str(self.romfs), str(output)], env=env, capture_output=True, text=True)
+        # Model the absent optional ITEMS slice; delegate every other import probe.
+        launcher = """import importlib.util, runpy, sys
+from pathlib import Path
+entry = sys.argv.pop(1)
+sys.argv[0] = entry
+sys.path.insert(0, str(Path(entry).parent))
+original_find_spec = importlib.util.find_spec
+def input_only_spec(name, *args, **kwargs):
+    if name == 'pc_item_layouts':
+        return None
+    return original_find_spec(name, *args, **kwargs)
+importlib.util.find_spec = input_only_spec
+runpy.run_path(entry, run_name='__main__')
+"""
+        result = subprocess.run([sys.executable, '-c', launcher,
+                                 str(pc.HERE / 'gen_romfs_overlay.py'),
+                                 str(self.romfs), str(output)],
+                                env=env, capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertTrue((output / 'pc_desktop').is_file())
         self.assertFalse((output / 'ctrl_touch').exists())

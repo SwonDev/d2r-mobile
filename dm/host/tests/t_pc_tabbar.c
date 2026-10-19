@@ -1,4 +1,5 @@
 // PC TabBar init adapter changes one byte of the original object.
+#define DM_PC_ITEMS_CONNECTED 0
 #include "../dm_cursor.c"
 module_t g_mod[MAX_MOD];int g_nmod;
 static int desktop,checks,failures;

@@ -3,6 +3,7 @@
 static int pointer_oom;
 static void *pointer_test_malloc(size_t n){return pointer_oom?NULL:malloc(n);}
 #define malloc pointer_test_malloc
+#define DM_PC_ITEMS_CONNECTED 0
 #include "../dm_cursor.c"
 #undef malloc
 void dm_custom_pointer_input(void){}

@@ -1,4 +1,5 @@
 // PC composition through original messages; synthetic callbacks and tree, no character files.
+#define DM_PC_ITEMS_CONNECTED 0
 #include "../dm_cursor.c"
 static int page_requests;
 void dm_pages_request_flip(int direction){(void)direction;page_requests++;}

@@ -1,3 +1,4 @@
+#define DM_PC_ITEMS_CONNECTED 0
 #include "../dm_cursor.c"
 void dm_custom_pointer_input(void){}
 static int checks,failures,lost,gained;

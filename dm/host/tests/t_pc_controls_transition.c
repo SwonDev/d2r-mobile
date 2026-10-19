@@ -1,4 +1,5 @@
 // AppKit request, native Chronicle close, then editor; no app or preferences.
+#define DM_PC_ITEMS_CONNECTED 0
 #include "../dm_cursor.c"
 module_t g_mod[MAX_MOD];int g_nmod;
 static int desktop=1,ingame=1,checks,failures;static uint64_t frame;

@@ -1,4 +1,5 @@
 // PC click capture: selection uses no controller coordinates or buttons.
+#define DM_PC_ITEMS_CONNECTED 0
 #include "../dm_cursor.c"
 module_t g_mod[MAX_MOD];int g_nmod;
 static int checks,failures;

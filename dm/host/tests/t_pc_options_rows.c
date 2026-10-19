@@ -1,3 +1,4 @@
+#define DM_PC_ITEMS_CONNECTED 0
 #include "../dm_cursor.c"
 static int checks,failures,allocations,appends,constructs,getters[3],calls,oom,missing;
 static uint8_t panel[0x300],list[0x100],rows[11][0x100],old[0x98],old_snapshot[0x98];

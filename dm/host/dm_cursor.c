@@ -1,10 +1,14 @@
 #include "dm_elysium.h"
 #include "dm_cursor.h"
+#ifndef DM_PC_ITEMS_CONNECTED
 #if __has_include("dm_pc_items.h")
-#include "dm_pc_items.h"
 #define DM_PC_ITEMS_CONNECTED 1
 #else
 #define DM_PC_ITEMS_CONNECTED 0
+#endif
+#endif
+#if DM_PC_ITEMS_CONNECTED
+#include "dm_pc_items.h"
 #endif
 #include "dm_custom.h"
 #include "dm.h"

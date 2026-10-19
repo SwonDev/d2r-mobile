@@ -148,15 +148,15 @@ $(B)/t_romfs_validate: t_romfs_validate.c ../romfs_validate.c ../romfs_validate.
 	clang -O1 -Wno-unused-function -I.. -o $@ t_romfs_validate.c ../romfs_validate.c ../dm_i18n.c
 
 $(B)/t_hid_script: t_hid_script.c t_touch_tick_stub.c ../hle_hid.c ../dm_cursor.c ../dm_hud.c ../dm_hud.h ../touch_mac.c ../../ios/Sources/dm_touch_controls.c ../hle.h ../dm.h ../dm_input.h ../front.h ../dm_cursor.h ../touch_mac.h ../dm_world.h | $(B) ../dm_prof.c
-	clang -O1 -Wno-unused-function -I.. -I../../ios/Sources -o $@ t_hid_script.c t_touch_tick_stub.c ../dm_cursor.c ../dm_hud.c ../touch_mac.c ../../ios/Sources/dm_touch_controls.c -lm ../dm_prof.c
+	clang -DDM_PC_ITEMS_CONNECTED=0 -O1 -Wno-unused-function -I.. -I../../ios/Sources -o $@ t_hid_script.c t_touch_tick_stub.c ../dm_cursor.c ../dm_hud.c ../touch_mac.c ../../ios/Sources/dm_touch_controls.c -lm ../dm_prof.c
 
 $(B)/t_oe: t_oe.c ../hle_oe.c ../hle.h ../dm.h | $(B)
 	clang -O1 -Wno-unused-function -I.. -o $@ t_oe.c
 
 $(B)/t_hid_receipt: t_hid_receipt.c t_touch_tick_stub.c ../hle_hid.c ../dm_cursor.c ../dm_hud.c ../dm_hud.h ../touch_mac.c ../../ios/Sources/dm_touch_controls.c ../hle.h ../dm.h ../dm_input.h ../front.h ../dm_cursor.h ../touch_mac.h ../dm_world.h | $(B) ../dm_prof.c
-	clang -O1 -Wno-unused-function -I.. -I../../ios/Sources -o $@ t_hid_receipt.c t_touch_tick_stub.c ../dm_cursor.c ../dm_hud.c ../touch_mac.c ../../ios/Sources/dm_touch_controls.c -lm ../dm_prof.c
+	clang -DDM_PC_ITEMS_CONNECTED=0 -O1 -Wno-unused-function -I.. -I../../ios/Sources -o $@ t_hid_receipt.c t_touch_tick_stub.c ../dm_cursor.c ../dm_hud.c ../touch_mac.c ../../ios/Sources/dm_touch_controls.c -lm ../dm_prof.c
 $(B)/t_touch_mac: t_touch_mac.c ../touch_mac.c ../dm_cursor.c ../dm_hud.c ../dm_hud.h ../../ios/Sources/dm_touch_controls.c ../../ios/Sources/dm_touch_controls.h ../../host/dm_input.h ../dm_cursor.h ../touch_mac.h ../dm_world.h | $(B)   # 测试 #include 了 touch_mac.c 与 dm_touch_controls.c，须列为依赖（漏列致改源不重编） ../dm_prof.c | The tests #include touch_mac.c and dm_touch_controls.c, so they must be listed as dependencies (missing them means editing the source does not trigger a rebuild) ../dm_prof.c
-	clang -std=c11 -Wall -Wextra -Werror -I.. -I../../ios/Sources -o $@ t_touch_mac.c ../dm_cursor.c ../dm_hud.c -lm ../dm_prof.c
+	clang -DDM_PC_ITEMS_CONNECTED=0 -std=c11 -Wall -Wextra -Werror -I.. -I../../ios/Sources -o $@ t_touch_mac.c ../dm_cursor.c ../dm_hud.c -lm ../dm_prof.c
 $(B)/t_target_rank: t_target_rank.c ../hle_target.c ../dm.h | $(B)
 	clang -O1 -Wno-unused-function -I.. -o $@ t_target_rank.c ../hle_target.c
 $(B)/t_rift_clock: t_rift_clock.c ../dm_rift.c ../dm_rift.h ../hle_os.c ../hle.h ../dm.h | $(B)
@@ -195,10 +195,11 @@ PC_INPUT_TESTS = t_pc_mouse t_pc_escape t_pc_frontend t_pc_inventory t_pc_keys t
 .PHONY: pc-input
 pc-input: export DM_TEST_MAIN = $(abspath $(B))/main.orig.bin
 pc-input: export DM_TEST_BUILD = $(abspath $(B))
-pc-input: $(EXEFS)/main $(B)/main.orig.bin $(addprefix $(B)/,$(PC_INPUT_TESTS)) $(B)/t_controls_front $(B)/t_controls_mac $(B)/t_touch_mac controls-i18n-mac test_pc_input_hooks.py t_pc_quickcast_original.py ../../ios/tests/test_pc_input_overlay.py
+pc-input: $(EXEFS)/main $(B)/main.orig.bin $(addprefix $(B)/,$(PC_INPUT_TESTS)) $(B)/t_controls_front $(B)/t_controls_mac $(B)/t_touch_mac controls-i18n-mac t_pc_items_boundary.py test_pc_input_hooks.py t_pc_quickcast_original.py ../../ios/tests/test_pc_input_overlay.py
 	@set -e; for test in $(PC_INPUT_TESTS); do if [ "$$test" = t_pc_keys ]; then $(B)/$$test $(B)/main.orig.bin; else $(B)/$$test; fi; done
 	@set -e; dir=$$(mktemp -d "$(abspath $(B))/pc-input.XXXXXX"); trap 'rm -r "$$dir"' EXIT; $(B)/t_controls_front "$$dir/front"; for mode in write read resurrected legacy olddefault oldcustom oldcustom-read oldcustom-reset pc34default pc34custom pc34invalid mouse-write mouse-read; do case $$mode in read) data=write;; oldcustom-read|oldcustom-reset) data=oldcustom;; mouse-read) data=mouse-write;; *) data=$$mode;; esac; $(B)/t_controls_mac $$mode "$$dir/$$data"; done
 	$(B)/t_touch_mac
+	$(PY) t_pc_items_boundary.py
 	$(PY) test_pc_input_hooks.py --nso "$(EXEFS)/main"
 	$(PY) ../../ios/tests/test_pc_input_overlay.py
 	$(PY) ../../ios/tests/test_mac_framework_boundary.py
